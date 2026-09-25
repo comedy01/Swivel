@@ -1,0 +1,20 @@
+{
+	"schemaVersion": 1,
+	"id": "swivel-selftest",
+	"version": "1.0.0",
+	"name": "Swivel self test",
+	"description": "Development-only in-world checks for Swivel. Not shipped.",
+	"license": "MIT",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"dev.swivel.selftest.fabric.SwivelSelfTestFabric"
+		]
+	},
+	"depends": {
+		"swivel": "*"
+	},
+	"mixins": [
+		"swivel_selftest.mixins.json"
+	]
+}

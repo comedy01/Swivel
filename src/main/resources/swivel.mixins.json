@@ -1,0 +1,18 @@
+{
+	"required": true,
+	"minVersion": "0.8",
+	"package": "dev.swivel.mixin",
+	"compatibilityLevel": "JAVA_${java_version}",
+	"client": [
+		"CameraMixin",
+		"CrosshairMixin",
+		"KeyboardInputMixin",
+		"LocalPlayerAccessor",
+		"MinecraftMixin",
+		"MouseHandlerMixin",
+		"PickMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}
