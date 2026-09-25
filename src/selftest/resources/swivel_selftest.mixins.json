@@ -1,0 +1,14 @@
+{
+	"required": true,
+	"minVersion": "0.8",
+	"package": "dev.swivel.selftest.mixin",
+	"compatibilityLevel": "JAVA_17",
+	"client": [
+		"MinecraftFrameMixin",
+		"MouseHandlerAccess",
+		"SwivelRuntimeClockMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

@@ -1,0 +1,42 @@
+{
+	"schemaVersion": 1,
+	"id": "swivel",
+	"version": "${version}",
+	"name": "Swivel",
+	"description": "A better camera. Swing the third-person view all the way around your character and still mine, build and aim at whatever is under your crosshair, or hold a key to look around freely in first person. Client-side only.",
+	"icon": {
+		"16": "assets/swivel/icon16.png",
+		"32": "assets/swivel/icon32.png",
+		"128": "assets/swivel/icon128.png"
+	},
+	"authors": [
+		"comedy01"
+	],
+	"license": "MIT",
+	"contact": {
+		"homepage": "https://github.com/comedy01/Swivel",
+		"sources": "https://github.com/comedy01/Swivel",
+		"issues": "https://github.com/comedy01/Swivel/issues"
+	},
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"dev.swivel.fabric.SwivelFabric"
+		],
+		"modmenu": [
+			"dev.swivel.fabric.SwivelModMenu"
+		]
+	},
+	"mixins": [
+		"swivel.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "${range}",
+		"java": ">=${java_version}",
+		"${key_module}": "*"
+	},
+	"suggests": {
+		"modmenu": "*"
+	}
+}
