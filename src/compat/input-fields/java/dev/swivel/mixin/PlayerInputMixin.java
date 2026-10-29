@@ -8,7 +8,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-// Steers whatever input the player has (keyboard, or a controller mod's own input), right after it ticks.
 @Mixin(LocalPlayer.class)
 abstract class PlayerInputMixin {
     @Inject(

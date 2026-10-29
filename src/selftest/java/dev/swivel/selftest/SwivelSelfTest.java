@@ -407,8 +407,6 @@ public final class SwivelSelfTest {
         });
     }
 
-    // True when part of the near clip plane (0.05 in front of the camera, sized for a 90 degree 16:9 view) is
-    // inside a block, which is what lets you see through it.
     private static boolean insideBlock(Minecraft mc, Vec3 camera) {
         Vec3 forward = SwivelRuntime.cameraForward();
         Vec3 right = forward.cross(new Vec3(0.0, 1.0, 0.0)).normalize();
