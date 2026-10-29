@@ -6,11 +6,13 @@
 	"client": [
 		"CameraMixin",
 		"CrosshairMixin",
-		"KeyboardInputMixin",
+		"EntityMixin",
+		"InputAccessor",
 		"LocalPlayerAccessor",
 		"MinecraftMixin",
-		"MouseHandlerMixin",
-		"PickMixin"
+		"PickMixin",
+		"PlayerFadeMixin",
+		"PlayerInputMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

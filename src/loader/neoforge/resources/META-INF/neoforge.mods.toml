@@ -10,7 +10,7 @@ displayName="Swivel"
 displayURL="https://github.com/comedy01/Swivel"
 iconFile="assets/swivel/icon128.png"
 authors="comedy01"
-description='''A better camera. Swing the third-person view all the way around your character and still mine, build and aim at whatever is under your crosshair, or hold a key to look around freely in first person. Client-side only.'''
+description='''A better camera. Swing the third-person view all the way around your character and still mine, build and aim at whatever is under your crosshair, or hold a key to look around freely in first person. Works with controllers through Controlify. Client-side only.'''
 
 [[mixins]]
 config="swivel.mixins.json"

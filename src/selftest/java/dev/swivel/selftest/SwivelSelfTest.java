@@ -26,6 +26,7 @@ import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.ChatVisiblity;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -66,6 +67,8 @@ public final class SwivelSelfTest {
     private float cameraYaw;
     private int patience;
     private Vec3 start;
+    private long fadedFrames;
+    private BlockPos tunnel;
     private BlockPos target;
 
     private record Step(int delay, BooleanSupplier ready, Runnable action) {
@@ -248,6 +251,41 @@ public final class SwivelSelfTest {
                 "the camera popped straight back out instead of gliding: " + orbit.distance()));
         then(40, () -> {
             check(Math.abs(orbit.distance() - 8.0) < 0.2, "the camera did not glide back out: " + orbit.distance());
+            check(SwivelRuntime.playerAlpha(mc.player) == 1.0F, "the player faded with the camera far away");
+            LocalPlayer player = mc.player;
+            int wall = Mth.floor(player.getX()) + 1;
+            int y = Mth.floor(player.getY());
+            int z = Mth.floor(player.getZ());
+            run(mc, "fill " + wall + " " + (y - 1) + " " + (z - 3) + " " + wall + " " + (y + 4) + " " + (z + 3)
+                    + " minecraft:stone");
+        });
+        within(40, () -> orbit.distance() < 1.0, () -> {
+            fadedFrames = SwivelRuntime.fadedFrames();
+        });
+        then(5, () -> {
+            float alpha = SwivelRuntime.playerAlpha(mc.player);
+            check(orbit.distance() < 1.0, "the close wall did not pull the camera in: " + orbit.distance());
+            check(alpha < 0.6F, "the player did not fade with the camera close: " + alpha);
+            check(SwivelRuntime.fadedFrames() > fadedFrames, "the faded player was not drawn see-through");
+            screenshot(mc, "faded");
+            config.setFadePlayer(false);
+        });
+        then(3, () -> {
+            check(SwivelRuntime.playerAlpha(mc.player) == 1.0F, "Fade When Close off still faded the player");
+            fadedFrames = SwivelRuntime.fadedFrames();
+        });
+        then(5, () -> {
+            check(SwivelRuntime.fadedFrames() == fadedFrames, "Fade When Close off still drew the player see-through");
+            config.setFadePlayer(true);
+            LocalPlayer player = mc.player;
+            int wall = Mth.floor(player.getX()) + 1;
+            int y = Mth.floor(player.getY());
+            int z = Mth.floor(player.getZ());
+            run(mc, "fill " + wall + " " + (y - 1) + " " + (z - 3) + " " + wall + " " + (y + 4) + " " + (z + 3)
+                    + " minecraft:air");
+        });
+        then(40, () -> {
+            check(SwivelRuntime.playerAlpha(mc.player) == 1.0F, "the player stayed faded after the wall was gone");
             config.setDistance(SwivelConfig.DEFAULT_DISTANCE);
             config.setEnabled(false);
         });
@@ -291,6 +329,10 @@ public final class SwivelSelfTest {
             check(mc.player.isUsingItem(), "holding use did not draw the bow");
             check(angle(mc.player.getYRot(), cameraYaw) < 2.0F,
                     "drawing the bow did not face the crosshair: " + mc.player.getYRot() + " vs " + cameraYaw);
+            check(SwivelRuntime.aimCamera(), "drawing the bow did not switch on the aim camera");
+            check(orbit.shoulder() > 0.5, "the aim camera did not move over the right shoulder: " + orbit.shoulder());
+            check(orbit.distance() < config.aimDistance() + 0.2,
+                    "the aim camera did not move closer: " + orbit.distance() + " vs " + config.aimDistance());
             screenshot(mc, "bow");
             mc.options.keyUse.setDown(false);
         });
@@ -302,13 +344,87 @@ public final class SwivelSelfTest {
             float arrowYaw = OrbitMath.yawTo(flight.x, flight.z);
             check(angle(arrowYaw, cameraYaw) < 5.0F,
                     "the arrow did not fly where the camera aimed: " + arrowYaw + " vs " + cameraYaw);
+            check(!SwivelRuntime.aimCamera(), "the aim camera stayed on after shooting");
+            check(orbit.shoulder() < 0.3, "the camera did not leave the shoulder after shooting: " + orbit.shoulder());
+            run(mc, "kill @e[type=minecraft:arrow]");
+            config.setAimCamera(SwivelConfig.AimCamera.OFF);
+            mc.options.keyUse.setDown(true);
+        });
+        then(20, () -> {
+            check(mc.player.isUsingItem(), "holding use did not draw the bow again");
+            check(!SwivelRuntime.aimCamera() && orbit.shoulder() == 0.0,
+                    "Aim Camera Off still moved the camera: " + orbit.shoulder());
+            check(Math.abs(orbit.distance() - config.distance()) < 0.2,
+                    "Aim Camera Off still moved the camera closer: " + orbit.distance());
+            mc.options.keyUse.setDown(false);
+            config.setAimCamera(SwivelConfig.DEFAULT_AIM_CAMERA);
+        });
+        then(30, () -> {
             run(mc, "kill @e[type=minecraft:arrow]");
             run(mc, "clear @p");
         });
+        planTunnel(mc, orbit);
         planFreeLook(mc);
         planSwivel(mc, config, orbit);
         planRaise(mc, config, orbit);
         planSettings(mc, config);
+    }
+
+    private void planTunnel(Minecraft mc, OrbitCamera orbit) {
+        List<String> buried = new ArrayList<>();
+        then(5, () -> {
+            LocalPlayer player = mc.player;
+            tunnel = player.blockPosition();
+            run(mc, String.format(Locale.ROOT, "tp @p %.1f %d %.1f 0 0",
+                    tunnel.getX() + 0.5, tunnel.getY(), tunnel.getZ() + 0.5));
+            run(mc, "fill " + (tunnel.getX() - 1) + " " + (tunnel.getY() - 1) + " " + (tunnel.getZ() - 4) + " "
+                    + (tunnel.getX() + 1) + " " + (tunnel.getY() + 2) + " " + (tunnel.getZ() + 4)
+                    + " minecraft:stone hollow");
+        });
+        for (int yaw = 0; yaw < 360; yaw += 45) {
+            for (int pitch = -60; pitch <= 80; pitch += 20) {
+                float wantedYaw = yaw;
+                float wantedPitch = pitch;
+                then(2, () -> Mouse.move(mc, Mth.wrapDegrees(wantedYaw - orbit.yaw()) * MOUSE_PER_DEGREE,
+                        (wantedPitch - orbit.pitch()) * MOUSE_PER_DEGREE));
+                then(3, () -> {
+                    Vec3 camera = SwivelRuntime.cameraPosition();
+                    if (insideBlock(mc, camera)) {
+                        buried.add(String.format(Locale.ROOT, "yaw %.0f pitch %.0f at %.2f %.2f %.2f",
+                                orbit.yaw(), orbit.pitch(), camera.x, camera.y, camera.z));
+                    }
+                });
+            }
+        }
+        then(1, () -> {
+            screenshot(mc, "tunnel");
+            run(mc, "fill " + (tunnel.getX() - 1) + " " + tunnel.getY() + " " + (tunnel.getZ() - 4) + " "
+                    + (tunnel.getX() + 1) + " " + (tunnel.getY() + 2) + " " + (tunnel.getZ() + 4) + " minecraft:air");
+            Mouse.move(mc, -orbit.pitch() * MOUSE_PER_DEGREE, 0.0);
+            check(buried.isEmpty(), "the camera clipped into the tunnel walls " + buried.size() + " times: " + buried);
+        });
+        then(10, () -> {
+        });
+    }
+
+    // True when part of the near clip plane (0.05 in front of the camera, sized for a 90 degree 16:9 view) is
+    // inside a block, which is what lets you see through it.
+    private static boolean insideBlock(Minecraft mc, Vec3 camera) {
+        Vec3 forward = SwivelRuntime.cameraForward();
+        Vec3 right = forward.cross(new Vec3(0.0, 1.0, 0.0)).normalize();
+        Vec3 up = right.cross(forward).normalize();
+        Vec3 center = camera.add(forward.scale(0.05));
+        for (int corner = 0; corner < 5; corner++) {
+            Vec3 point = corner == 4 ? center : center.add(right.scale((corner & 1) == 0 ? -0.09 : 0.09))
+                    .add(up.scale((corner & 2) == 0 ? -0.05 : 0.05));
+            BlockPos pos = BlockPos.containing(point);
+            for (AABB box : mc.level.getBlockState(pos).getCollisionShape(mc.level, pos).toAabbs()) {
+                if (box.contains(point.x - pos.getX(), point.y - pos.getY(), point.z - pos.getZ())) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private void planFreeLook(Minecraft mc) {
@@ -420,6 +536,19 @@ public final class SwivelSelfTest {
             check(angle(mc.player.getYRot(), cameraYaw) < 2.0F,
                     "the swing back turned the runner: " + mc.player.getYRot());
         });
+
+        then(5, () -> {
+            cameraYaw = mc.player.getYRot();
+            Mouse.move(mc, 90.0 * MOUSE_PER_DEGREE, 0.0);
+        });
+        then(10, () -> {
+            check(angle(mc.player.getYRot(), cameraYaw) < 2.0F,
+                    "turning the camera while standing turned the character: " + mc.player.getYRot());
+            SwivelRuntime.faceCamera(mc.player);
+        });
+        then(2, () -> check(angle(mc.player.getYRot(), orbit.yaw()) < 1.0F
+                        && angle(mc.player.yBodyRot, orbit.yaw()) < 1.0F,
+                "Face Camera did not turn the character to the camera: " + mc.player.getYRot() + " vs " + orbit.yaw()));
     }
 
     private void planRaise(Minecraft mc, SwivelConfig config, OrbitCamera orbit) {
@@ -486,8 +615,15 @@ public final class SwivelSelfTest {
         });
         then(3, () -> {
             check(!config.raiseCamera(), "the Raise Camera button did not switch it off");
+            click(mc, find(Screens.current(mc), "swivel.options.fade_player"));
+        });
+        then(3, () -> {
+            check(!config.fadePlayer(), "the Fade When Close button did not switch it off");
             scroll(Screens.current(mc), true);
         });
+        then(3, () -> click(mc, find(Screens.current(mc), "swivel.options.aim_camera")));
+        then(3, () -> check(config.aimCamera() == SwivelConfig.AimCamera.LEFT_SHOULDER,
+                "the Aim Camera button did not switch to the left shoulder: " + config.aimCamera()));
         then(3, () -> click(mc, find(Screens.current(mc), "swivel.options.free_look_crosshair")));
         then(3, () -> {
             check(!config.hideCrosshairInFreeLook(), "the Hide Crosshair button did not switch it off");
@@ -505,6 +641,8 @@ public final class SwivelSelfTest {
             check(!config.strafe(), "reset did not switch strafing back off");
             check(!config.swivelWhileRunning(), "reset did not switch Swivel While Running back off");
             check(config.raiseCamera(), "reset did not switch Raise Camera back on");
+            check(config.aimCamera() == SwivelConfig.DEFAULT_AIM_CAMERA, "reset did not restore the aim camera");
+            check(config.fadePlayer(), "reset did not switch Fade When Close back on");
             check(config.hideCrosshairInFreeLook(), "reset did not switch Hide Crosshair back on");
             check(config.distance() == SwivelConfig.DEFAULT_DISTANCE, "reset did not restore the distance");
             check(count(screen, "Turn Speed") == 1, "reset left " + count(screen, "Turn Speed") + " turn sliders");

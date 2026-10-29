@@ -48,6 +48,8 @@ class SwivelConfigTest {
         config.setCrosshair(false);
         config.setAlignOnExit(false);
         config.setHideCrosshairInFreeLook(false);
+        config.setAimCamera(SwivelConfig.AimCamera.CENTERED);
+        config.setFadePlayer(false);
         config.save(file);
 
         SwivelConfig loaded = SwivelConfig.load(file);
@@ -62,6 +64,38 @@ class SwivelConfigTest {
         assertFalse(loaded.crosshair());
         assertFalse(loaded.alignOnExit());
         assertFalse(loaded.hideCrosshairInFreeLook());
+        assertEquals(SwivelConfig.AimCamera.CENTERED, loaded.aimCamera());
+        assertFalse(loaded.fadePlayer());
+        assertTrue(Files.readString(file, StandardCharsets.UTF_8).contains("\"aimCamera\": \"centered\""));
+    }
+
+    @Test
+    void unknownAimCameraFallsBackToTheDefault() throws IOException {
+        Path file = dir.resolve(SwivelConfig.FILE_NAME);
+        Files.writeString(file, "{\"aimCamera\": \"sideways\"}", StandardCharsets.UTF_8);
+        assertEquals(SwivelConfig.DEFAULT_AIM_CAMERA, SwivelConfig.load(file).aimCamera());
+    }
+
+    @Test
+    void aimCameraCyclesThroughEveryMode() {
+        SwivelConfig.AimCamera mode = SwivelConfig.AimCamera.RIGHT_SHOULDER;
+        assertEquals(SwivelConfig.AimCamera.LEFT_SHOULDER, mode = mode.next());
+        assertEquals(SwivelConfig.AimCamera.CENTERED, mode = mode.next());
+        assertEquals(SwivelConfig.AimCamera.OFF, mode = mode.next());
+        assertEquals(SwivelConfig.AimCamera.RIGHT_SHOULDER, mode.next());
+        assertEquals(1.0F, SwivelConfig.AimCamera.RIGHT_SHOULDER.side());
+        assertEquals(-1.0F, SwivelConfig.AimCamera.LEFT_SHOULDER.side());
+        assertEquals(0.0F, SwivelConfig.AimCamera.CENTERED.side());
+    }
+
+    @Test
+    void aimingMovesTheCameraCloserButNotPastTheMinimum() {
+        SwivelConfig config = new SwivelConfig();
+        assertEquals(2.2, config.aimDistance(), 1.0E-9);
+        config.setDistance(12.0);
+        assertEquals(6.6, config.aimDistance(), 1.0E-9);
+        config.setDistance(SwivelConfig.MIN_DISTANCE);
+        assertEquals(SwivelConfig.MIN_DISTANCE, config.aimDistance(), 1.0E-9);
     }
 
     @Test
@@ -87,6 +121,8 @@ class SwivelConfigTest {
         assertTrue(config.raiseCamera());
         assertFalse(config.swivelWhileRunning());
         assertTrue(config.hideCrosshairInFreeLook());
+        assertEquals(SwivelConfig.DEFAULT_AIM_CAMERA, config.aimCamera());
+        assertTrue(config.fadePlayer());
         assertEquals(0.7, config.height(), 1.0E-9);
     }
 
@@ -130,6 +166,8 @@ class SwivelConfigTest {
         config.setCrosshair(false);
         config.setAlignOnExit(false);
         config.setHideCrosshairInFreeLook(false);
+        config.setAimCamera(SwivelConfig.AimCamera.OFF);
+        config.setFadePlayer(false);
         config.resetToDefaults();
         assertTrue(config.enabled());
         assertEquals(SwivelConfig.DEFAULT_TURN_SPEED, config.turnSpeed());
@@ -142,5 +180,7 @@ class SwivelConfigTest {
         assertTrue(config.crosshair());
         assertTrue(config.alignOnExit());
         assertTrue(config.hideCrosshairInFreeLook());
+        assertTrue(config.fadePlayer());
+        assertEquals(SwivelConfig.DEFAULT_AIM_CAMERA, config.aimCamera());
     }
 }

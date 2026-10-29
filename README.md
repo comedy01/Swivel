@@ -2,7 +2,7 @@
 
 A better camera for Minecraft. Swing the third-person camera all the way around your character and still mine, build and aim at whatever is under your crosshair. In first person, hold a key to look around without turning.
 
-Swivel is a small client-side mod for Minecraft on Fabric, NeoForge and Forge, compatible with Mod Menu on Fabric.
+Swivel is a small client-side mod for Minecraft on Fabric, NeoForge and Forge, compatible with Mod Menu on Fabric. It works with controllers through [Controlify](https://modrinth.com/mod/controlify) on Fabric and NeoForge.
 
 Supported versions: 1.20 to 26.3 on Fabric, 1.21 to 26.3 on NeoForge, 1.20.1 on Forge.
 
@@ -14,9 +14,13 @@ Supported versions: 1.20 to 26.3 on Fabric, 1.21 to 26.3 on NeoForge, 1.20.1 on 
 - **Walk where you look** - W walks the way the camera faces, and your character turns smoothly toward where it walks. Turn Speed sets how quickly.
 - **Swivel while running** (optional) - once you start moving, the mouse only swings the camera and your character keeps running the same way, so you can look behind you or at your character's face mid-run. Press a different movement key to head where the camera looks.
 - **Aims where you point** - attacking, mining, placing blocks and drawing a bow, crossbow or trident turn your character to whatever the crosshair covers, and the server sees the same aim, so arrows fly where you pointed.
+- **Aim camera** - while you draw a bow, crossbow or trident, or hold a loaded crossbow, the camera glides in over your shoulder and your character faces where you aim and sidesteps, so you can strafe while you aim. Pick the right or left shoulder, Centered (only moves closer) or Off.
 - **Crosshair in third person** (optional) - shows what you will hit, mine or use.
 - **Raised camera** (optional) - lifts the camera a little above your character's eyes so your head doesn't cover the crosshair. It stops short of ceilings.
-- **Camera distance** from 2 to 12 blocks, with smooth wall collisions: walls pull the camera in at once and it glides back out once clear.
+- **Camera distance** from 2 to 12 blocks, with smooth wall collisions: walls pull the camera in at once and it glides back out once clear. Optional keys move the camera closer or further while you play.
+- **Fade when close** (optional) - when a wall pushes the camera in tight, your character fades out so you can still see. Armor and held items hide once your character is mostly faded.
+- **First-person spyglass** (optional) - looking through a spyglass switches to first person, and back to third person when you stop.
+- **Controller support** - works with controller mods like Controlify: the right stick swings the camera and the left stick walks where the camera looks. With Controlify, Swivel's keys show up in its controller settings under *Swivel*, ready to put on any button.
 - **Strafe mode** (optional) - your character keeps facing the camera direction and sidesteps, like in a shooter.
 - **Vehicles, flying and swimming** - elytra flight steers toward the camera, horses and pigs follow it, boats and minecarts keep their own controls while the camera stays free, and swimming follows the camera up and down.
 - **Keep view in first person** - switching back to first person looks where the camera was looking.
@@ -37,6 +41,9 @@ Swivel is client-side only: there is nothing to install on a server.
 | Free Look (hold) | Left Alt | Look around without turning your character |
 | Toggle Orbit Camera | not bound | Switch the orbit camera on or off |
 | Recenter Camera | not bound | Swing the camera back behind your character |
+| Camera Closer | not bound | Move the camera closer (hold to keep moving) |
+| Camera Further | not bound | Move the camera further away (hold to keep moving) |
+| Swap Aim Shoulder | not bound | Switch the aim camera between your right and left shoulder |
 
 Change them in *Options > Controls > Key Binds*, or with the *Key Binds...* button in Swivel's settings.
 

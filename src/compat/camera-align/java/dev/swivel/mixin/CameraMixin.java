@@ -59,6 +59,10 @@ abstract class CameraMixin {
         if (lift > 0.0F) {
             move(0.0F, lift, 0.0F);
         }
+        float side = SwivelRuntime.cameraSide(camera, level, entity, position(), new Vec3(up.x(), up.y(), up.z()));
+        if (side != 0.0F) {
+            move(0.0F, 0.0F, side);
+        }
         return SwivelRuntime.cameraDistance(distance, wanted -> original.call(camera, wanted));
     }
 }

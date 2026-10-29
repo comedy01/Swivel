@@ -36,6 +36,44 @@ public final class SwivelConfig {
     public static final boolean DEFAULT_CROSSHAIR = true;
     public static final boolean DEFAULT_ALIGN_ON_EXIT = true;
     public static final boolean DEFAULT_HIDE_CROSSHAIR_IN_FREE_LOOK = true;
+    public static final boolean DEFAULT_SPYGLASS_FIRST_PERSON = true;
+    public static final AimCamera DEFAULT_AIM_CAMERA = AimCamera.RIGHT_SHOULDER;
+    public static final double AIM_ZOOM = 0.55;
+    public static final boolean DEFAULT_FADE_PLAYER = true;
+
+    public enum AimCamera {
+        @SerializedName("rightShoulder")
+        RIGHT_SHOULDER("right_shoulder"),
+        @SerializedName("leftShoulder")
+        LEFT_SHOULDER("left_shoulder"),
+        @SerializedName("centered")
+        CENTERED("centered"),
+        @SerializedName("off")
+        OFF("off");
+
+        private final String key;
+
+        AimCamera(String key) {
+            this.key = key;
+        }
+
+        public String key() {
+            return key;
+        }
+
+        public AimCamera next() {
+            AimCamera[] all = values();
+            return all[(ordinal() + 1) % all.length];
+        }
+
+        public float side() {
+            return switch (this) {
+                case RIGHT_SHOULDER -> 1.0F;
+                case LEFT_SHOULDER -> -1.0F;
+                default -> 0.0F;
+            };
+        }
+    }
 
     private static final Logger LOGGER = LoggerFactory.getLogger("swivel");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -72,6 +110,15 @@ public final class SwivelConfig {
 
     @SerializedName("hideCrosshairInFreeLook")
     private boolean hideCrosshairInFreeLook = DEFAULT_HIDE_CROSSHAIR_IN_FREE_LOOK;
+
+    @SerializedName("spyglassFirstPerson")
+    private boolean spyglassFirstPerson = DEFAULT_SPYGLASS_FIRST_PERSON;
+
+    @SerializedName("aimCamera")
+    private AimCamera aimCamera = DEFAULT_AIM_CAMERA;
+
+    @SerializedName("fadePlayer")
+    private boolean fadePlayer = DEFAULT_FADE_PLAYER;
 
     public boolean enabled() {
         return enabled;
@@ -171,6 +218,34 @@ public final class SwivelConfig {
         hideCrosshairInFreeLook = value;
     }
 
+    public boolean spyglassFirstPerson() {
+        return spyglassFirstPerson;
+    }
+
+    public void setSpyglassFirstPerson(boolean value) {
+        spyglassFirstPerson = value;
+    }
+
+    public AimCamera aimCamera() {
+        return aimCamera;
+    }
+
+    public void setAimCamera(AimCamera value) {
+        aimCamera = value == null ? DEFAULT_AIM_CAMERA : value;
+    }
+
+    public boolean fadePlayer() {
+        return fadePlayer;
+    }
+
+    public void setFadePlayer(boolean value) {
+        fadePlayer = value;
+    }
+
+    public double aimDistance() {
+        return Math.min(distance, Math.max(MIN_DISTANCE, distance * AIM_ZOOM));
+    }
+
     public void resetToDefaults() {
         enabled = DEFAULT_ENABLED;
         turnSpeed = DEFAULT_TURN_SPEED;
@@ -183,12 +258,16 @@ public final class SwivelConfig {
         crosshair = DEFAULT_CROSSHAIR;
         alignOnExit = DEFAULT_ALIGN_ON_EXIT;
         hideCrosshairInFreeLook = DEFAULT_HIDE_CROSSHAIR_IN_FREE_LOOK;
+        spyglassFirstPerson = DEFAULT_SPYGLASS_FIRST_PERSON;
+        aimCamera = DEFAULT_AIM_CAMERA;
+        fadePlayer = DEFAULT_FADE_PLAYER;
     }
 
     private void sanitize() {
         setTurnSpeed(turnSpeed);
         setDistance(distance);
         setHeight(height);
+        setAimCamera(aimCamera);
     }
 
     public static SwivelConfig load(Path file) {

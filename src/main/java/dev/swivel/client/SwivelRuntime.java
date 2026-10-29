@@ -11,10 +11,15 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.item.CrossbowItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ProjectileWeaponItem;
+import net.minecraft.world.item.TridentItem;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.phys.AABB;
@@ -23,6 +28,7 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 import java.lang.ref.WeakReference;
+import java.util.Locale;
 
 public final class SwivelRuntime {
     private static final int ACTION_HOLD_TICKS = 8;
@@ -31,8 +37,16 @@ public final class SwivelRuntime {
     private static final float LEVEL_PITCH_RATE = 0.3F;
     private static final float KEY_THRESHOLD = 0.1F;
     private static final double MAX_FRAME_SECONDS = 0.25;
-    private static final double LIFT_MARGIN = 0.1;
+    private static final double CLEARANCE = 0.2;
+    private static final double CLEAR_STEP = 0.05;
     private static final double AIM_DISTANCE = 96.0;
+    private static final int ZOOM_REPEAT_DELAY = 6;
+    private static final int ZOOM_REPEAT_EVERY = 2;
+    private static final double SHOULDER_OFFSET = 0.6;
+    private static final double FADE_START = 1.6;
+    private static final double FADE_END = 0.6;
+    private static final float MIN_ALPHA = 0.2F;
+    private static final float LAYER_ALPHA = 0.6F;
 
     private static final OrbitCamera ORBIT = new OrbitCamera();
     private static final FreeLook FREE_LOOK = new FreeLook();
@@ -51,6 +65,14 @@ public final class SwivelRuntime {
     private static float savedXRot;
     private static float savedYRotO;
     private static float savedXRotO;
+    private static int zoomHeldTicks;
+    private static boolean wasScoping;
+    private static CameraType spyglassReturn;
+    private static boolean aimCamera;
+    private static double cameraDistance = -1.0;
+    private static WeakReference<Object> fadedState = new WeakReference<>(null);
+    private static float fadedAlpha = 1.0F;
+    private static long fadedFrames;
 
     private SwivelRuntime() {
     }
@@ -71,6 +93,14 @@ public final class SwivelRuntime {
         return ORBIT.active();
     }
 
+    public static Vec3 cameraPosition() {
+        return Cameras.position(Cameras.main(Minecraft.getInstance()));
+    }
+
+    public static Vec3 cameraForward() {
+        return Cameras.forward(Cameras.main(Minecraft.getInstance()));
+    }
+
     public static long crosshairFrames() {
         return crosshairFrames;
     }
@@ -87,6 +117,8 @@ public final class SwivelRuntime {
             FREE_LOOK.stop();
             MOVE.reset();
             actionTicks = 0;
+            wasScoping = false;
+            spyglassReturn = null;
         }
 
         long now = System.nanoTime();
@@ -107,8 +139,11 @@ public final class SwivelRuntime {
         }
         if (mc.options.getCameraType().isFirstPerson()) {
             ORBIT.resetDistance();
+            cameraDistance = -1.0;
         }
         updateFreeLook(mc);
+        aimCamera = ORBIT.active() && SwivelClient.config().aimCamera() != SwivelConfig.AimCamera.OFF
+                && aimingWeapon(player);
         ORBIT.advance(frameSeconds);
         if (player != null) {
             FREE_LOOK.advance(frameSeconds, player.getViewYRot(partialTicks), player.getViewXRot(partialTicks));
@@ -195,22 +230,111 @@ public final class SwivelRuntime {
         if (wanted <= 0.0) {
             return 0.0F;
         }
-        Vec3 top = eye.add(up.scale(wanted + LIFT_MARGIN));
-        HitResult hit = level.clip(new ClipContext(eye, top, ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, entity));
-        if (hit.getType() == HitResult.Type.MISS) {
-            return (float) wanted;
+        return (float) clearReach(level, eye, up, wanted);
+    }
+
+    public static float cameraSide(Camera camera, BlockGetter level, Entity entity, Vec3 from, Vec3 up) {
+        double wanted = aimCamera ? SwivelClient.config().aimCamera().side() * SHOULDER_OFFSET : 0.0;
+        double side = ORBIT.smoothShoulder(wanted, frameSeconds);
+        if (!ORBIT.active() || level == null || entity == null || side == 0.0) {
+            return 0.0F;
         }
-        return (float) Math.max(0.0, Math.min(wanted, hit.getLocation().distanceTo(eye) - LIFT_MARGIN));
+        Vec3 right = Cameras.forward(camera).cross(up).normalize().scale(Math.signum(side));
+        return (float) Math.copySign(clearReach(level, from, right, Math.abs(side)), side);
+    }
+
+    // How far the camera can slide from 'from' along 'direction' before a box around it touches a block. Vanilla
+    // starts its zoom check from the eyes, which always have about this much room, and its rays begin inside the
+    // ceiling (and let the camera through) when the start point is any closer.
+    private static double clearReach(BlockGetter level, Vec3 from, Vec3 direction, double wanted) {
+        double reach = 0.0;
+        while (reach < wanted) {
+            double next = Math.min(wanted, reach + CLEAR_STEP);
+            if (blocked(level, from.add(direction.scale(next)))) {
+                break;
+            }
+            reach = next;
+        }
+        return reach;
+    }
+
+    private static boolean blocked(BlockGetter level, Vec3 point) {
+        AABB box = new AABB(point, point).inflate(CLEARANCE);
+        for (BlockPos pos : BlockPos.betweenClosed(BlockPos.containing(box.minX, box.minY, box.minZ),
+                BlockPos.containing(box.maxX, box.maxY, box.maxZ))) {
+            AABB local = box.move(-pos.getX(), -pos.getY(), -pos.getZ());
+            for (AABB shape : level.getBlockState(pos).getCollisionShape(level, pos).toAabbs()) {
+                if (shape.intersects(local)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public static boolean aimCamera() {
+        return aimCamera;
     }
 
     public static float cameraDistance(float vanilla, Collision collision) {
         SwivelConfig config = SwivelClient.config();
         if (!config.enabled()) {
-            return collision.allowed(vanilla);
+            float allowed = collision.allowed(vanilla);
+            cameraDistance = allowed;
+            return allowed;
         }
-        float wanted = (float) (vanilla * config.distance() / SwivelConfig.DEFAULT_DISTANCE);
+        double zoom = ORBIT.smoothZoom(aimCamera ? config.aimDistance() : config.distance(), frameSeconds);
+        float wanted = (float) (vanilla * zoom / SwivelConfig.DEFAULT_DISTANCE);
         float allowed = collision.allowed(wanted);
-        return (float) ORBIT.smoothDistance(allowed, frameSeconds, config.smoothCollisions());
+        cameraDistance = ORBIT.smoothDistance(allowed, frameSeconds, config.smoothCollisions());
+        return (float) cameraDistance;
+    }
+
+    public static float playerAlpha(Entity entity) {
+        Minecraft mc = Minecraft.getInstance();
+        if (!SwivelClient.config().fadePlayer() || entity == null || entity != mc.player
+                || mc.getCameraEntity() != entity || mc.options.getCameraType().isFirstPerson()
+                || cameraDistance < 0.0 || cameraDistance >= FADE_START) {
+            return 1.0F;
+        }
+        double share = Math.max(0.0, (cameraDistance - FADE_END) / (FADE_START - FADE_END));
+        return (float) (MIN_ALPHA + (1.0 - MIN_ALPHA) * share);
+    }
+
+    public static void markFade(Object state, Entity entity) {
+        float alpha = playerAlpha(entity);
+        if (alpha < 1.0F) {
+            fadedState = new WeakReference<>(state);
+            fadedAlpha = alpha;
+        } else if (fadedState.get() == state) {
+            fadedState.clear();
+        }
+    }
+
+    public static float stateAlpha(Object state) {
+        return state != null && fadedState.get() == state ? fadedAlpha : 1.0F;
+    }
+
+    public static boolean fadeBody(float alpha) {
+        return alpha < 1.0F;
+    }
+
+    public static float fadeAlpha(float alpha) {
+        fadedFrames++;
+        return alpha;
+    }
+
+    public static int fadeColor(float alpha) {
+        fadedFrames++;
+        return Math.round(alpha * 255.0F) << 24 | 0xFFFFFF;
+    }
+
+    public static boolean fadeLayers(float alpha) {
+        return alpha < LAYER_ALPHA;
+    }
+
+    public static long fadedFrames() {
+        return fadedFrames;
     }
 
     public static boolean turnCamera(double xo, double yo) {
@@ -306,6 +430,21 @@ public final class SwivelRuntime {
             }
         }
 
+        KeyMapping swap = SwivelClient.swapShoulderKey();
+        while (swap != null && swap.consumeClick()) {
+            swapShoulder(player);
+        }
+
+        KeyMapping face = SwivelClient.faceCameraKey();
+        while (face != null && face.consumeClick()) {
+            if (ORBIT.active() && player != null) {
+                faceCamera(player);
+            }
+        }
+
+        updateZoom(player);
+        updateSpyglass(mc, player);
+
         if (!ORBIT.active() || player == null) {
             return;
         }
@@ -314,6 +453,84 @@ public final class SwivelRuntime {
         } else if (aiming(mc, player)) {
             faceAim(mc, player, false);
         }
+    }
+
+    public static void faceCamera(LocalPlayer player) {
+        float yaw = OrbitMath.near(player.getYRot(), freeYaw());
+        player.setYRot(yaw);
+        player.yRotO = yaw;
+        player.setYHeadRot(yaw);
+        player.setYBodyRot(yaw);
+    }
+
+    private static void swapShoulder(LocalPlayer player) {
+        SwivelConfig config = SwivelClient.config();
+        SwivelConfig.AimCamera mode = switch (config.aimCamera()) {
+            case RIGHT_SHOULDER -> SwivelConfig.AimCamera.LEFT_SHOULDER;
+            case LEFT_SHOULDER -> SwivelConfig.AimCamera.RIGHT_SHOULDER;
+            default -> null;
+        };
+        if (mode == null) {
+            return;
+        }
+        config.setAimCamera(mode);
+        SwivelClient.saveConfig();
+        if (player != null) {
+            Messages.overlay(player, Component.translatable("swivel.message.aim_camera",
+                    Component.translatable("swivel.options.aim_camera." + mode.key())));
+        }
+    }
+
+    private static void updateZoom(LocalPlayer player) {
+        KeyMapping in = SwivelClient.zoomInKey();
+        KeyMapping out = SwivelClient.zoomOutKey();
+        int steps = 0;
+        while (in != null && in.consumeClick()) {
+            steps--;
+        }
+        while (out != null && out.consumeClick()) {
+            steps++;
+        }
+
+        boolean inDown = in != null && in.isDown();
+        boolean outDown = out != null && out.isDown();
+        if (inDown != outDown) {
+            zoomHeldTicks++;
+            if (zoomHeldTicks > ZOOM_REPEAT_DELAY && (zoomHeldTicks - ZOOM_REPEAT_DELAY) % ZOOM_REPEAT_EVERY == 0) {
+                steps += inDown ? -1 : 1;
+            }
+        } else {
+            zoomHeldTicks = 0;
+        }
+        if (steps == 0) {
+            return;
+        }
+
+        SwivelConfig config = SwivelClient.config();
+        double before = config.distance();
+        config.setDistance(before + steps * SwivelConfig.DISTANCE_STEP);
+        if (config.distance() != before) {
+            SwivelClient.saveConfig();
+        }
+        if (player != null) {
+            Messages.overlay(player, Component.translatable("swivel.message.distance",
+                    String.format(Locale.ROOT, "%.1f", config.distance())));
+        }
+    }
+
+    private static void updateSpyglass(Minecraft mc, LocalPlayer player) {
+        boolean scoping = player != null && mc.getCameraEntity() == player && player.isScoping();
+        if (scoping && !wasScoping && SwivelClient.config().spyglassFirstPerson()
+                && !mc.options.getCameraType().isFirstPerson()) {
+            spyglassReturn = mc.options.getCameraType();
+            mc.options.setCameraType(CameraType.FIRST_PERSON);
+        } else if (!scoping && spyglassReturn != null) {
+            if (mc.options.getCameraType().isFirstPerson()) {
+                mc.options.setCameraType(spyglassReturn);
+            }
+            spyglassReturn = null;
+        }
+        wasScoping = scoping;
     }
 
     public static void beforeAction() {
@@ -381,9 +598,25 @@ public final class SwivelRuntime {
 
     private static boolean aiming(Minecraft mc, LocalPlayer player) {
         return player.isUsingItem()
+                || aimCamera && aimingWeapon(player)
                 || mc.options.keyAttack.isDown()
                 || mc.options.keyUse.isDown()
                 || actionTicks > 0;
+    }
+
+    private static boolean aimingWeapon(LocalPlayer player) {
+        if (player == null) {
+            return false;
+        }
+        if (player.isUsingItem()) {
+            ItemStack used = player.getUseItem();
+            return used.getItem() instanceof ProjectileWeaponItem || used.getItem() instanceof TridentItem;
+        }
+        return loadedCrossbow(player.getMainHandItem()) || loadedCrossbow(player.getOffhandItem());
+    }
+
+    private static boolean loadedCrossbow(ItemStack stack) {
+        return stack.getItem() instanceof CrossbowItem && CrossbowItem.isCharged(stack);
     }
 
     private static void faceAim(Minecraft mc, LocalPlayer player, boolean announce) {

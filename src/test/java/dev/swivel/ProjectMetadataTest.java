@@ -92,7 +92,7 @@ class ProjectMetadataTest {
         JsonObject mixins = resourceJson("swivel.mixins.json");
         assertEquals("dev.swivel.mixin", mixins.get("package").getAsString());
         JsonArray client = mixins.getAsJsonArray("client");
-        assertEquals(7, client.size());
+        assertEquals(9, client.size());
         for (JsonElement entry : client) {
             assertClassExists("dev.swivel.mixin." + entry.getAsString());
         }
@@ -104,7 +104,8 @@ class ProjectMetadataTest {
     void everySettingIsTranslated() throws IOException {
         JsonObject lang = resourceJson("assets/swivel/lang/en_us.json");
         String[] options = {"enabled", "turn_speed", "distance", "raise_camera", "height", "strafe", "swivel_running",
-                "smooth_collisions", "crosshair", "align_on_exit", "free_look_crosshair", "keys", "reset"};
+                "smooth_collisions", "crosshair", "align_on_exit", "fade_player", "aim_camera", "spyglass", "free_look_crosshair",
+                "keys", "reset"};
         for (String option : options) {
             assertTrue(lang.has("swivel.options." + option), option);
             assertTrue(lang.has("swivel.options." + option + ".tooltip"), option + " tooltip");
@@ -112,6 +113,10 @@ class ProjectMetadataTest {
         for (String key : new String[] {"swivel.options.title", "swivel.options.section.third_person",
                 "swivel.options.section.free_look", "swivel.options.section.free_look.unbound",
                 "key.category.swivel.main", "key.swivel.free_look", "key.swivel.toggle", "key.swivel.recenter",
+                "key.swivel.zoom_in", "key.swivel.zoom_out", "key.swivel.swap_shoulder", "swivel.options.section.aiming",
+                "swivel.options.aim_camera.right_shoulder", "swivel.options.aim_camera.left_shoulder",
+                "swivel.options.aim_camera.centered", "swivel.options.aim_camera.off", "swivel.message.aim_camera",
+                "swivel.message.distance",
                 "swivel.message.on", "swivel.message.off"}) {
             assertTrue(lang.has(key), key);
         }

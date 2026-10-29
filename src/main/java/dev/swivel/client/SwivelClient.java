@@ -14,6 +14,10 @@ public final class SwivelClient {
     private static KeyMapping toggleKey;
     private static KeyMapping recenterKey;
     private static KeyMapping freeLookKey;
+    private static KeyMapping zoomInKey;
+    private static KeyMapping zoomOutKey;
+    private static KeyMapping swapShoulderKey;
+    private static KeyMapping faceCameraKey;
 
     private SwivelClient() {
     }
@@ -35,10 +39,32 @@ public final class SwivelClient {
         return KeyFactory.create("key.swivel.free_look", InputConstants.KEY_LALT);
     }
 
-    public static void setKeys(KeyMapping toggle, KeyMapping recenter, KeyMapping freeLook) {
+    public static KeyMapping createZoomInKey() {
+        return KeyFactory.create("key.swivel.zoom_in", InputConstants.UNKNOWN.getValue());
+    }
+
+    public static KeyMapping createZoomOutKey() {
+        return KeyFactory.create("key.swivel.zoom_out", InputConstants.UNKNOWN.getValue());
+    }
+
+    public static KeyMapping createSwapShoulderKey() {
+        return KeyFactory.create("key.swivel.swap_shoulder", InputConstants.UNKNOWN.getValue());
+    }
+
+    public static KeyMapping createFaceCameraKey() {
+        return KeyFactory.create("key.swivel.face_camera", InputConstants.UNKNOWN.getValue());
+    }
+
+    public static void setKeys(KeyMapping toggle, KeyMapping recenter, KeyMapping freeLook, KeyMapping zoomIn,
+                               KeyMapping zoomOut, KeyMapping swapShoulder, KeyMapping faceCamera) {
         toggleKey = toggle;
         recenterKey = recenter;
         freeLookKey = freeLook;
+        zoomInKey = zoomIn;
+        zoomOutKey = zoomOut;
+        swapShoulderKey = swapShoulder;
+        faceCameraKey = faceCamera;
+        ControlifyBindings.register(freeLook, recenter, toggle, zoomIn, zoomOut, swapShoulder, faceCamera);
     }
 
     public static KeyMapping toggleKey() {
@@ -51,6 +77,22 @@ public final class SwivelClient {
 
     public static KeyMapping freeLookKey() {
         return freeLookKey;
+    }
+
+    public static KeyMapping zoomInKey() {
+        return zoomInKey;
+    }
+
+    public static KeyMapping zoomOutKey() {
+        return zoomOutKey;
+    }
+
+    public static KeyMapping swapShoulderKey() {
+        return swapShoulderKey;
+    }
+
+    public static KeyMapping faceCameraKey() {
+        return faceCameraKey;
     }
 
     public static SwivelConfig config() {
