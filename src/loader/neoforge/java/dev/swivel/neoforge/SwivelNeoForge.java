@@ -20,11 +20,19 @@ public final class SwivelNeoForge {
         KeyMapping toggle = SwivelClient.createToggleKey();
         KeyMapping recenter = SwivelClient.createRecenterKey();
         KeyMapping freeLook = SwivelClient.createFreeLookKey();
-        SwivelClient.setKeys(toggle, recenter, freeLook);
+        KeyMapping zoomIn = SwivelClient.createZoomInKey();
+        KeyMapping zoomOut = SwivelClient.createZoomOutKey();
+        KeyMapping swapShoulder = SwivelClient.createSwapShoulderKey();
+        KeyMapping faceCamera = SwivelClient.createFaceCameraKey();
+        SwivelClient.setKeys(toggle, recenter, freeLook, zoomIn, zoomOut, swapShoulder, faceCamera);
         modBus.addListener(RegisterKeyMappingsEvent.class, event -> {
             event.register(toggle);
             event.register(recenter);
             event.register(freeLook);
+            event.register(zoomIn);
+            event.register(zoomOut);
+            event.register(swapShoulder);
+            event.register(faceCamera);
         });
 
         container.registerExtensionPoint(

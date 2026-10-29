@@ -133,4 +133,55 @@ class OrbitCameraTest {
         orbit.resetDistance();
         assertEquals(4.0, orbit.smoothDistance(4.0, 0.016, true), 1.0E-9);
     }
+
+    @Test
+    void zoomStartsAtTheWantedDistance() {
+        OrbitCamera orbit = new OrbitCamera();
+        assertEquals(6.0, orbit.smoothZoom(6.0, 0.016), 1.0E-9);
+    }
+
+    @Test
+    void zoomGlidesBothWays() {
+        OrbitCamera orbit = new OrbitCamera();
+        orbit.smoothZoom(4.0, 0.016);
+        double closer = orbit.smoothZoom(2.0, 0.016);
+        assertTrue(closer < 4.0 && closer > 2.0, "should ease in, got " + closer);
+        double further = orbit.smoothZoom(8.0, 0.016);
+        assertTrue(further > closer && further < 8.0, "should ease out, got " + further);
+        for (int frame = 0; frame < 120; frame++) {
+            further = orbit.smoothZoom(8.0, 1.0 / 60.0);
+        }
+        assertEquals(8.0, further, 1.0E-3);
+    }
+
+    @Test
+    void resetForgetsTheZoom() {
+        OrbitCamera orbit = new OrbitCamera();
+        orbit.smoothZoom(2.0, 0.016);
+        orbit.resetDistance();
+        assertEquals(8.0, orbit.smoothZoom(8.0, 0.016), 1.0E-9);
+    }
+
+    @Test
+    void theShoulderOffsetGlidesInAndOut() {
+        OrbitCamera orbit = new OrbitCamera();
+        double side = orbit.smoothShoulder(0.6, 1.0 / 60.0);
+        assertTrue(side > 0.0 && side < 0.6, "should ease, got " + side);
+        for (int frame = 0; frame < 60; frame++) {
+            side = orbit.smoothShoulder(0.6, 1.0 / 60.0);
+        }
+        assertEquals(0.6, side, 1.0E-9);
+        for (int frame = 0; frame < 60; frame++) {
+            side = orbit.smoothShoulder(0.0, 1.0 / 60.0);
+        }
+        assertEquals(0.0, side, 1.0E-9);
+    }
+
+    @Test
+    void resetDropsTheShoulderOffset() {
+        OrbitCamera orbit = new OrbitCamera();
+        orbit.smoothShoulder(0.6, 1.0);
+        orbit.resetDistance();
+        assertEquals(0.0, orbit.shoulder(), 1.0E-9);
+    }
 }

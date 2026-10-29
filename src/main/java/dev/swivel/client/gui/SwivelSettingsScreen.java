@@ -57,6 +57,13 @@ public final class SwivelSettingsScreen extends SwivelOptionsScreen {
                 toggle("swivel.options.crosshair", config::crosshair, config::setCrosshair),
                 toggle("swivel.options.align_on_exit", config::alignOnExit, config::setAlignOnExit));
 
+        addRow(toggle("swivel.options.fade_player", config::fadePlayer, config::setFadePlayer), null);
+
+        addHeader(Component.translatable("swivel.options.section.aiming"));
+
+        addRow(aimCameraButton(config),
+                toggle("swivel.options.spyglass", config::spyglassFirstPerson, config::setSpyglassFirstPerson));
+
         addHeader(freeLookHeader());
 
         addRow(toggle("swivel.options.free_look_crosshair", config::hideCrosshairInFreeLook,
@@ -95,6 +102,21 @@ public final class SwivelSettingsScreen extends SwivelOptionsScreen {
                 .width(WIDTH)
                 .tooltip(Tooltip.create(Component.translatable("swivel.options.reset.tooltip")))
                 .build();
+    }
+
+    private static AbstractWidget aimCameraButton(SwivelConfig config) {
+        return Button.builder(aimCameraLabel(config.aimCamera()), button -> {
+                    config.setAimCamera(config.aimCamera().next());
+                    button.setMessage(aimCameraLabel(config.aimCamera()));
+                })
+                .width(WIDTH)
+                .tooltip(Tooltip.create(Component.translatable("swivel.options.aim_camera.tooltip")))
+                .build();
+    }
+
+    private static Component aimCameraLabel(SwivelConfig.AimCamera mode) {
+        return Component.translatable("options.generic_value", Component.translatable("swivel.options.aim_camera"),
+                Component.translatable("swivel.options.aim_camera." + mode.key()));
     }
 
     private static AbstractWidget toggle(String key, BooleanSupplier getter, Consumer<Boolean> setter) {

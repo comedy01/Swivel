@@ -12,6 +12,10 @@ public final class SwivelFabric implements ClientModInitializer {
         SwivelClient.setKeys(
                 KeyRegistrar.register(SwivelClient.createToggleKey()),
                 KeyRegistrar.register(SwivelClient.createRecenterKey()),
-                KeyRegistrar.register(SwivelClient.createFreeLookKey()));
+                KeyRegistrar.register(SwivelClient.createFreeLookKey()),
+                KeyRegistrar.register(SwivelClient.createZoomInKey()),
+                KeyRegistrar.register(SwivelClient.createZoomOutKey()),
+                KeyRegistrar.register(SwivelClient.createSwapShoulderKey()),
+                KeyRegistrar.register(SwivelClient.createFaceCameraKey()));
     }
 }

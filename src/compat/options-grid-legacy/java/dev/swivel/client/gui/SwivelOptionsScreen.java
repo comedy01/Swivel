@@ -11,6 +11,7 @@ import net.minecraft.network.chat.Component;
 
 public abstract class SwivelOptionsScreen extends OptionsSubScreen {
     private int rows;
+    private int openRow = -1;
 
     protected SwivelOptionsScreen(Screen lastScreen, Options options, Component title) {
         super(lastScreen, options, title);
@@ -21,6 +22,7 @@ public abstract class SwivelOptionsScreen extends OptionsSubScreen {
     @Override
     protected void init() {
         rows = 0;
+        openRow = -1;
         addOptions();
         addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, button -> onClose())
                 .bounds(width / 2 - 100, height - 27, 200, 20)
@@ -31,14 +33,26 @@ public abstract class SwivelOptionsScreen extends OptionsSubScreen {
     }
 
     protected void addRow(AbstractWidget left, AbstractWidget right) {
-        int y = height / 6 - 12 + rows * 24;
+        if (right == null && openRow >= 0) {
+            left.setPosition(width / 2 + 5, rowY(openRow));
+            addRenderableWidget(left);
+            openRow = -1;
+            return;
+        }
+        int y = rowY(rows);
         left.setPosition(width / 2 - 155, y);
         addRenderableWidget(left);
         if (right != null) {
             right.setPosition(width / 2 + 5, y);
             addRenderableWidget(right);
+        } else {
+            openRow = rows;
         }
         rows++;
+    }
+
+    private int rowY(int row) {
+        return height / 6 - 12 + row * 24;
     }
 
     @Override

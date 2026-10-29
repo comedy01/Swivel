@@ -3,7 +3,7 @@
 	"id": "swivel",
 	"version": "${version}",
 	"name": "Swivel",
-	"description": "A better camera. Swing the third-person view all the way around your character and still mine, build and aim at whatever is under your crosshair, or hold a key to look around freely in first person. Client-side only.",
+	"description": "A better camera. Swing the third-person view all the way around your character and still mine, build and aim at whatever is under your crosshair, or hold a key to look around freely in first person. Works with controllers through Controlify. Client-side only.",
 	"icon": {
 		"16": "assets/swivel/icon16.png",
 		"32": "assets/swivel/icon32.png",
