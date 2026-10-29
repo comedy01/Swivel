@@ -10,11 +10,6 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
-/**
- * Offers Swivel's keys as controller bindings in Controlify's settings. Uses reflection so Swivel needs no
- * Controlify jar to build and does nothing when Controlify is missing. The calls used here are the same in
- * Controlify 2.x and 3.x.
- */
 final class ControlifyBindings {
     private static final Logger LOGGER = LoggerFactory.getLogger("swivel");
     private static final String API = "dev.isxander.controlify.api.bind.";

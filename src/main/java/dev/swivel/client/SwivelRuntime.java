@@ -243,9 +243,6 @@ public final class SwivelRuntime {
         return (float) Math.copySign(clearReach(level, from, right, Math.abs(side)), side);
     }
 
-    // How far the camera can slide from 'from' along 'direction' before a box around it touches a block. Vanilla
-    // starts its zoom check from the eyes, which always have about this much room, and its rays begin inside the
-    // ceiling (and let the camera through) when the start point is any closer.
     private static double clearReach(BlockGetter level, Vec3 from, Vec3 direction, double wanted) {
         double reach = 0.0;
         while (reach < wanted) {
